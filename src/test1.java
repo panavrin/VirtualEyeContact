@@ -30,24 +30,44 @@ public class test1 extends PApplet{
 			{-1.4779096108364480e-03,  9.9992385683542895e-01, -1.2251380107679535e-02},
 			{ 1.7470421412464927e-02, 1.2275341476520762e-02,  9.9977202419716948e-01 }};
 
-	double[][] T = {{ 1,0,0,1}, 
-			{0,1,0,0},
-			{ 0,0,1,0 }, 
-			{ 0,0,0,1 }};
-	double[][] R2 = {{ 1,0,0,1}, 
-			{0,1,0,0},
-			{ 0,0,1,0 }, 
-			{ 0,0,0,1 }};
+	final double fx_d = 1.0 / 5.9421434211923247e+02;
+	final double fy_d = 1.0 / 5.9104053696870778e+02;
+	final double cx_d = 3.3930780975300314e+02;
+	final double cy_d = 2.4273913761751615e+02;
+	final double fx_rgb  = 5.2921508098293293e+02;
+	final double fy_rgb = 5.2556393630057437e+02;
+	final double cx_rgb = 3.2894272028759258e+02;
+	final double cy_rgb =2.6748068171871557e+02;
 
+	double[][] I = {{ 0,0,0,0}, 
+			{0,0,0,0},
+			{ 0,0,1,0 }};
+
+
+
+
+
+	double[][] R2 = {{ 1,0,0,0}, 
+			{0,1,0,0.1},
+			{ 0,0,1,0 }, 
+			{ 0,0,0,1 }};
+/*	double[][] R2 = {{ 1,0,0,0}, 
+			{0,9.006,0.4346,0.1351},
+			{ 0,-0.4346,0.9006,0.652 }, 
+			{ 0,0,0,1 }};
+*/
 	public void setup() {
-		size(1280,520);
+		size(640,480);
 		kinect = new Kinect(this);
 		kinect.start();
 		kinect.enableDepth(depth);
 		kinect.enableRGB(rgb);
 		//		kinect.enableIR(ir);
 		kinect.tilt(deg);
-
+		I[0][0]=fx_rgb;
+		I[0][2]=cx_rgb;
+		I[1][1]=fy_rgb;
+		I[1][2]=cy_rgb;
 		// Lookup table for all possible depth values (0 - 2047)
 		for (int i = 0; i < depthLookUp.length; i++) {
 			depthLookUp[i] = rawDepthToMeters(i);
@@ -75,7 +95,7 @@ public class test1 extends PApplet{
 		int offset, color, rawDepth;
 		int h = kinect.getVideoImage().height;
 		int w = kinect.getVideoImage().width;
-	//	System.arraycopy( kinect.getVideoImage().pixels, 0, cPixels, 0, cPixels.length );
+		//	System.arraycopy( kinect.getVideoImage().pixels, 0, cPixels, 0, cPixels.length );
 
 		if ( toggleMode){
 			skip = 10;
@@ -86,7 +106,7 @@ public class test1 extends PApplet{
 
 					double[] result = worldToRGB(depthToWorld(x,y,rawDepth));
 					offset = (int)result[0]+(int)result[1]*w;
-				
+
 					//color = cPixels[offset];
 					color = kinect.getVideoImage().pixels[offset];
 					if(maxDepth < result[2])
@@ -113,20 +133,34 @@ public class test1 extends PApplet{
 			loadPixels();
 			int offset2;
 			int pink = color(255, 102, 204);
-
+			double hresult[]= new double[4];
+			int px,py;
 			for(int y=0; y<h; y+=skip) {
 				for(int x=0; x<w; x+=skip) {
+					rawDepth = depth[x+y*w];
+					double result[] = depthToWorld(x,y,rawDepth);
+					hresult[0]=result[0];
+					hresult[1]=result[1];
+					hresult[2]=result[2];
+					hresult[3]=1;
+					double arr[]=LinAlg.matrixAB(I,LinAlg.matrixAB(R2,hresult));
+					px= (int)(arr[0]/arr[2]);
+					py= (int)(arr[1]/arr[2]);
 					offset = x+y*w;
-					offset2 = x+640 + (y*2 * w);
+					offset2 = px + (py*640) ;
+					if(offset2 <0)
+						continue;
+					if(offset2 >= pixels.length)
+						continue;
 					pixels[offset2] = kinect.getVideoImage().pixels[offset];
-				
+
 				}
 			}
 			updatePixels();
 		}
 		if(count++%60 == 0)
 			System.out.println("maxDepth:" + maxDepth + ", minDepth:" + minDepth + ", minX:"+ minX+ ", minY:"+ minY + ", rgb:" + kinect.isInterrupted()+ ", rgb2:" + kinect.isAlive());
-		
+
 
 	}
 	int count=0;
@@ -166,14 +200,7 @@ public class test1 extends PApplet{
 		}
 		return 0.0f;
 	}
-	final double fx_d = 1.0 / 5.9421434211923247e+02;
-	final double fy_d = 1.0 / 5.9104053696870778e+02;
-	final double cx_d = 3.3930780975300314e+02;
-	final double cy_d = 2.4273913761751615e+02;
-	final double fx_rgb  = 5.2921508098293293e+02;
-	final double fy_rgb = 5.2556393630057437e+02;
-	final double cx_rgb = 3.2894272028759258e+02;
-	final double cy_rgb =2.6748068171871557e+02;
+
 
 	double[] depthToWorld(int x, int y, int depthValue) {
 		double[] result = new double[3];
