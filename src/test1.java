@@ -17,8 +17,6 @@ public class test1 extends PApplet{
 	boolean rgb = true;
 
 	float deg = 0; // Start at 15 degrees
-
-
 	// Size of kinect image
 	int w = 640;
 	int h = 480;
