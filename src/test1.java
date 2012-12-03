@@ -98,7 +98,7 @@ public class test1 extends PApplet{
 						minColor = color;
 					}
 
-					fill(color);
+					fill(color); 
 					float depthscale =3*(6- (float)result[2]);
 					ellipse((float)result[0]+640,(float)result[1],depthscale,depthscale);
 					result = null;
@@ -110,7 +110,6 @@ public class test1 extends PApplet{
 		}
 		else{
 			skip = 1;
-		//	stroke(255);
 			loadPixels();
 			int offset2;
 			int pink = color(255, 102, 204);
@@ -119,11 +118,7 @@ public class test1 extends PApplet{
 				for(int x=0; x<w; x+=skip) {
 					offset = x+y*w;
 					offset2 = x+640 + (y*2 * w);
-				//	color = cPixels[offset];
-				//	pixels[offset2] = cPixels[offset];
 					pixels[offset2] = kinect.getVideoImage().pixels[offset];
-					
-				//	pixels[offset2] = pink;//cPixels[offset];
 				
 				}
 			}
