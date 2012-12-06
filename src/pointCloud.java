@@ -6,6 +6,9 @@ import org.openkinect.*;
 import org.openkinect.processing.*;
 
 import april.jmat.LinAlg;
+import hypermedia.video.*;
+
+
 
 public class pointCloud extends PApplet{
 
@@ -17,8 +20,8 @@ public class pointCloud extends PApplet{
 
 	// Kinect Library object
 	Kinect kinect;
-
-	float a = 0;
+	OpenCV opencv;
+	float a = 0,b=0;
 
 	// Size of kinect image
 	int w = 640;
@@ -40,6 +43,10 @@ public class pointCloud extends PApplet{
 
 	public void setup() {
 		size(640,480,P3D);
+		
+	//	opencv = new OpenCV( this );
+	  //  opencv.capture( width, height );  // open video stream
+	    
 		deg = 0;
 		perspetiveZ = 10;
 		depth = true;
@@ -48,6 +55,7 @@ public class pointCloud extends PApplet{
 		kinect.start();
 		kinect.enableDepth(depth);
 		kinect.enableRGB(rgb);
+		
 		// We don't need the grayscale image in this example
 		// so this makes it more efficient
 		kinect.processDepthImage(false);
@@ -59,71 +67,103 @@ public class pointCloud extends PApplet{
 	}
 	int count = 0;
 	float maxWidth =1;
-	public void draw() {
 
+	private float tX;
+	private float tY;
+	private float tZ;
+	int count1=0;
+
+	final double fx_d = 1.0 / 5.9421434211923247e+02;
+	final double fy_d = 1.0 / 5.9104053696870778e+02;
+	final double cx_d = 3.3930780975300314e+02;
+	final double cy_d = 2.4273913761751615e+02;
+	final double fx_rgb  = 5.2921508098293293e+02;
+	final double fy_rgb = 5.2556393630057437e+02;
+	final double cx_rgb = 3.2894272028759258e+02;
+	final double cy_rgb =2.6748068171871557e+02;
+	
+	public void draw() {
+	
+	count1++;
+	if (count1 %2== 0)
+		return;
 		background(0);
 		fill(255);
 		textMode(SCREEN);
 		text("Kinect FR: " + (int)kinect.getDepthFPS() 
-				+ "\nProcessing FR: " + (int)frameRate
+				+ "  Processing FR: " + (int)frameRate
 				+ "\nz: " + a
+				+ " tY: " + tY
 				+ "\nperspetiveZ: "+ perspetiveZ,10,16);
 
 		// Get the raw depth as array of integers
 		int[] depth = kinect.getRawDepth();
-	//	if (toggleMode)ortho();
+		//	if (toggleMode)ortho();
 		// We're just going to calculate and draw every 4th pixel (equivalent of 160x120)
 		int skip = 1;
 		float upY = (float)( Math.cos(PI*perspetiveZ/180.0f));
 		float upZ = -(float)(Math.sin(PI*perspetiveZ/180.0f));
-		camera((float)(width/2.0), (float)(height/2.0), (float)((height/2.0) / Math.tan(PI*27 / 180.0))
-	//	camera((float)(width/2.0), (float)(height/2.0), 10
+		camera((float)(width/2.0), (float)(height/2.0), (float)((height/2.0) / Math.tan(PI*30 / 180.0))
+				//	camera((float)(width/2.0), (float)(height/2.0), 10
 				, (float)(width/2.0), (float)(height/2.0), 0.0f
 				, 0.0f,1.0f,0.0f );
-	//	System.out.println("upY" + upY + " upZ:"+ upZ);
+		//	System.out.println("upY" + upY + " upZ:"+ upZ);
 		// Translate and rotate
 		translate(width/2,height/2,0);
+		translate(tX,tY,tZ);
 		rotateX(a);
+		rotateY(b);
 		stroke(255);
-		
-		float factor = 480 ;/// maxWidth;
-		float width = 0, leftX = 0, rightX = 0;
+
+		float factor = (float)480 ;/// maxWidth;
+		float tWidth = 0, leftX = 0, rightX = 0;
 		maxWidth = 0;
 		int color;
 		int prevRawDepth = 10;
+		if (toggleMode){
+			for(int y=0; y<h; y+=skip) {
+				for(int x=0; x<w; x+=skip) {
+					int offset = x+y*w;
 
-		for(int y=0; y<h; y+=skip) {
-			for(int x=0; x<w; x+=skip) {
-				int offset = x+y*w;
+					// Convert kinect data to world xyz coordinate
+					int rawDepth = depth[offset];
+					if (rawDepth == 2047)
+						rawDepth = prevRawDepth;
+					prevRawDepth = rawDepth;
+					double[] v = depthToWorld(x,y,rawDepth);
+					float[] result = worldToRGB(v);
 
-				// Convert kinect data to world xyz coordinate
-				int rawDepth = depth[offset];
-				if (rawDepth == 2047)
-					 rawDepth = prevRawDepth;
-				prevRawDepth = rawDepth;
-				double[] v = depthToWorld(x,y,rawDepth);
-				float[] result = worldToRGB(v);
+					//				if (x==0) leftX = (float) v[0];
+					//			else if (x==w-1) rightX = (float) v[0];
+					pushMatrix();
+					// Scale up by 1000
+					offset = (int)result[0]+(int)result[1]*w;
 
-//				if (x==0) leftX = (float) v[0];
-	//			else if (x==w-1) rightX = (float) v[0];
-				pushMatrix();
-				// Scale up by 1000
-				offset = (int)result[0]+(int)result[1]*w;
+					//color = cPixels[offset];
+					color = kinect.getVideoImage().pixels[offset];
+					stroke(color);
 
-				//color = cPixels[offset];
-				color = kinect.getVideoImage().pixels[offset];
-				stroke(color);
-
-				translate((float)v[0]*factor,(float)v[1]*factor,factor-(float)v[2]*factor);
-				// Draw a point
-				point(0,0);
-				popMatrix();
+					translate((float)v[0]*factor,(float)v[1]*factor,factor-(float)v[2]*factor);
+					// Draw a point
+					point(0,0);
+					popMatrix();
+				}
+				tWidth = rightX - leftX;
+				//	if ( minWidth >width) minWidth = width;
+				//	if ( maxWidth <width) maxWidth = width;
 			}
-			width = rightX - leftX;
-		//	if ( minWidth >width) minWidth = width;
-		//	if ( maxWidth <width) maxWidth = width;
 		}
-	//	if (count++%10==0)
+			pushMatrix();
+			translate(-width/2,-height/2,0);
+			if(!toggleMode)	
+				image(kinect.getVideoImage(),0,0);
+		//	opencv.read();                   // grab frame from camera
+		//	image( opencv.image(), width/2, 0 );
+		//	image( opencv.image(), 0, 0 );
+			popMatrix();
+			
+			
+		//	if (count++%10==0)
 		//	System.out.println("maxWidth:" + maxWidth);
 		// Rotate
 		//  a += 0.015f;
@@ -146,10 +186,16 @@ public class pointCloud extends PApplet{
 			exit();
 		}
 		else if (key == 'i') {
-			a+=PI/30.0;
+			a+=PI/180.0;
 		}
 		else if (key == 'k') {
-			a-=PI/30.0;
+			a-=PI/180.0;
+		}
+		else if (key == 'o') {
+			tY+=5;
+		}
+		else if (key == 'l') {
+			tY-=5;
 		}
 		else if (key == CODED) {
 			if (keyCode == UP) {
@@ -160,12 +206,12 @@ public class pointCloud extends PApplet{
 			}
 			else if (keyCode == LEFT) {
 				//	perspetiveZ--;
-				a-=0.1;
+				b-=PI/180.0;
 			}
 			else if (keyCode == RIGHT) {
 				System.out.println("moving");
 				//	perspetiveZ++;
-				a+=0.1;
+				b+=PI/180.0;
 			}
 			deg = constrain(deg,0,30);
 			kinect.tilt(deg);
@@ -179,15 +225,7 @@ public class pointCloud extends PApplet{
 		}
 		return 0.0f;
 	}
-	final double fx_d = 1.0 / 5.9421434211923247e+02;
-	final double fy_d = 1.0 / 5.9104053696870778e+02;
-	final double cx_d = 3.3930780975300314e+02;
-	final double cy_d = 2.4273913761751615e+02;
-	final double fx_rgb  = 5.2921508098293293e+02;
-	final double fy_rgb = 5.2556393630057437e+02;
-	final double cx_rgb = 3.2894272028759258e+02;
-	final double cy_rgb =2.6748068171871557e+02;
-	double[][] R = {{ 9.9984628826577793e-01, 1.2635359098409581e-03,-1.7487233004436643e-02}, 
+		double[][] R = {{ 9.9984628826577793e-01, 1.2635359098409581e-03,-1.7487233004436643e-02}, 
 			{-1.4779096108364480e-03,  9.9992385683542895e-01, -1.2251380107679535e-02},
 			{ 1.7470421412464927e-02, 1.2275341476520762e-02,  9.9977202419716948e-01 }};
 
