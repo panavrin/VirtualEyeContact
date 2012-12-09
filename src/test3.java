@@ -5,7 +5,7 @@ import org.openkinect.processing.*;
 
 import april.jmat.LinAlg;
 
-public class test1 extends PApplet{
+public class test3 extends PApplet{
 	// Daniel Shiffman
 	// Basic Library functionality example
 	// http://www.shiffman.net
@@ -25,7 +25,6 @@ public class test1 extends PApplet{
 
 	// We'll use a lookup table so that we don't have to repeat the math over and over
 	float[] depthLookUp = new float[2048];
-
 	double[][] R = {{9.9986583586943278e-01, 1.3933618520368512e-02,
 	    8.6118834205556674e-03 },{-1.3802378793147345e-02,
 	        9.9979048725103170e-01, -1.5115420668805807e-02},
@@ -145,26 +144,38 @@ public class test1 extends PApplet{
 			double hresult[]= new double[4];
 			int px,py;
 			int prevMarkedOffset = 0;
-			image(kinect.getVideoImage(),0,0);
+		//	image(kinect.getVideoImage(),0,0);
+			int pink = color(255, 102, 204);
 
-			for(int y=h-1; y>=0; y-=skip) {
-				for(int x=w-1; x>=0; x-=skip) {
+			int count2047 = 0;
+			int countOOR = 0;
+			for(int y=0; y<h; y+=skip) {
+				for(int x=0; x<w; x+=skip) {
+					offset = x+y*w;
+				//	pixels[offset] = pink;
+				//	if ( true)continue;
 					rawDepth = depth[x+y*w];
-				/*	if (rawDepth == 2047)
+		/*			if (rawDepth == 2047){
+						//	pixels[offset] = 0;
+							count2047++;
+							continue;
+						}
+			*/	/*	if (rawDepth == 2047)
 						 rawDepth = prevRawDepth;
 					prevRawDepth = rawDepth;
 					*/
 					double result[] = depthWorldToRGBWorld(depthToWorld(x,y,rawDepth));
-				//	double result[] = LinAlg.matrixAB(R, result);
+				//	double result2[] = worldToRGB(depthToWorld(x,y,rawDepth));
 					hresult[0]=result[0];
 					hresult[1]=result[1];
 					hresult[2]=result[2];
 					hresult[3]=1;
 					double arr[]=LinAlg.matrixAB(I,LinAlg.matrixAB(R2,hresult));
+				//	double arr[]=LinAlg.matrixAB(I,hresult);
 					px= (int)(arr[0]/arr[2]);
 					py= (int)(arr[1]/arr[2]);
-					offset = x+y*w;
 					offset2 = px + (py*w) ;
+				//	offset2 = (int) (result2[0] + (result2[1]*w)) ;
 					/*
 					if ((x==0&&y==0) || (x==0&&y==h-1)|| (x==w-1&&y==0)|| (x==w-1&&y==h-1)) {
 						System.out.println("(x,y,rawDepth,offset2)"+ "(" + x + "," + y + ","+ rawDepth+","+offset2+")");
@@ -175,43 +186,24 @@ public class test1 extends PApplet{
 					}
 					*/
 					
-				/*	if (rawDepth == 2047){
-						pixels[offset] = 0;
-						continue;
-					}*/
-					if(offset2 <0 || offset2 >= pixels.length){
-						pixels[offset] = 0;
-						continue;
-					}
 					
-					if ( offset2 != prevMarkedOffset+1){
-						
+					if(offset2 <=0 || offset2 >= pixels.length){
+					//	pixels[offset] = 0;
+						countOOR++;
+						continue;
 					}
-					pixels[offset] = kinect.getVideoImage().pixels[offset2];
+					pixels[offset2] = kinect.getVideoImage().pixels[offset2];
 				//	prevMarkedOffset = offset2;
 				}
 			}
-			
-	/*
-			for(int y=0; y<h; y+=skip) {
-				for(int x=0; x<w; x+=skip) {
-					double result[] = depthToWorld(x,y,rawDepth);
-					hresult[0]=result[0];
-					hresult[1]=result[1];
-					hresult[2]=result[2];
-					hresult[3]=1;
-					
-					pixels[offset2] = kinect.getVideoImage().pixels[offset];
+		updatePixels();
+		if(count++%60 == 0)
+			System.out.println("countOOR:" + countOOR + ", count2047:" + count2047);// + ", minX:"+ minX+ ", minY:"+ minY + ", rgb:" + kinect.isInterrupted()+ ", rgb2:" + kinect.isAlive());
 
-				}
-			}
-		*/	updatePixels();
 		}
 		else
 			image(kinect.getVideoImage(),0,0);
 
-	//	if(count++%60 == 0)
-	//		System.out.println("maxDepth:" + maxDepth + ", minDepth:" + minDepth + ", minX:"+ minX+ ", minY:"+ minY + ", rgb:" + kinect.isInterrupted()+ ", rgb2:" + kinect.isAlive());
 
 
 	}

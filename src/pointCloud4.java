@@ -10,7 +10,7 @@ import hypermedia.video.*;
 
 
 
-public class pointCloud extends PApplet{
+public class pointCloud4 extends PApplet{
 
 	// Daniel Shiffman
 	// Kinect Point Cloud example
@@ -41,35 +41,12 @@ public class pointCloud extends PApplet{
 
 	private float perspetiveZ;
 
-	int count = 0;
-	float maxWidth =1;
-
-	private float tX;
-	private float tY;
-	private float tZ;
-	private float eyeX;
-	private float eyeY;
-	private float eyeZ;
-	private float[] eye;
-	int count1=0;
-
-	final double fx_d = 1.0 / 5.9421434211923247e+02;
-	final double fy_d = 1.0 / 5.9104053696870778e+02;
-	final double cx_d = 3.3930780975300314e+02;
-	final double cy_d = 2.4273913761751615e+02;
-	final double fx_rgb  = 5.2921508098293293e+02;
-	final double fy_rgb = 5.2556393630057437e+02;
-	final double cx_rgb = 3.2894272028759258e+02;
-	final double cy_rgb =2.6748068171871557e+02;
-	double [] T = { 1.9985242312092553e-02, -7.4423738761617583e-04,-1.0916736334336222e-02 };
-
-
 	public void setup() {
 		size(640,480,P3D);
-		
-	//	opencv = new OpenCV( this );
-	  //  opencv.capture( width, height );  // open video stream
-	    
+
+			opencv = new OpenCV( this );
+		 opencv.capture( width, height );  // open video stream
+
 		deg = 0;
 		perspetiveZ = 10;
 		depth = true;
@@ -78,14 +55,7 @@ public class pointCloud extends PApplet{
 		kinect.start();
 		kinect.enableDepth(depth);
 		kinect.enableRGB(rgb);
-		eyeX = (float) (width/2.0);
-		eyeY = (float)(height/2.0); 
-		eyeZ = (float)((height/2.0) / Math.tan(PI*30 / 180.0));
-		eye = new float[3];
-		eye[0] = eyeX;
-		eye[1] = eyeY;
-		eye[2] = eyeZ;
-		
+
 		// We don't need the grayscale image in this example
 		// so this makes it more efficient
 		kinect.processDepthImage(false);
@@ -95,11 +65,34 @@ public class pointCloud extends PApplet{
 			depthLookUp[i] = rawDepthToMeters(i);
 		}
 	}
+	int count = 0;
+	float maxWidth =1;
+
+	private float tX;
+	private float tY;
+	private float tZ;
+	int count1=0;
+
+	double[][] R = {{9.9986583586943278e-01, 1.3933618520368512e-02,
+	    8.6118834205556674e-03 },{-1.3802378793147345e-02,
+	        9.9979048725103170e-01, -1.5115420668805807e-02},
+	        {-8.8206916265604930e-03, 1.4994528244440669e-02,
+	        9.9984866831033770e-01}};
+	    	
+	double [] T = { 2.5519829514162606e-02, 4.5547959459655762e-03,
+		       -1.8768902009820901e-03 };
+
+	final double fx_d = 1.0 / 5.8543321103545850e+02;
+	final double fy_d = 1.0 / 5.8565103173830676e+02;
+	final double cx_d = 3.0986206725285871e+02;
+	final double cy_d = 2.3925413480022684e+02;
+	final double fx_rgb  = 5.2077977885169787e+02;
+	final double fy_rgb = 5.2150824862499417e+02;
+	final double cx_rgb = 3.2681302450787661e+02;
+	final double cy_rgb =2.6153301732128864e+02;
+
 	public void draw() {
-	
-	count1++;
-	if (count1 %2== 0)
-		return;
+
 		background(0);
 		fill(255);
 		textMode(SCREEN);
@@ -114,17 +107,12 @@ public class pointCloud extends PApplet{
 		//	if (toggleMode)ortho();
 		// We're just going to calculate and draw every 4th pixel (equivalent of 160x120)
 		int skip = 1;
-		float upY = (float)( Math.cos(PI*perspetiveZ/180.0f));
-		float upZ = -(float)(Math.sin(PI*perspetiveZ/180.0f));
-		// 320, 240, 240 / tan(30)
-		camera(eyeX,eyeY,eyeZ
-				//	camera((float)(width/2.0), (float)(height/2.0), 10
+		camera((float)(width/2.0), (float)(height/2.0), (float)((height/2.0) / Math.tan(PI*30 / 180.0))
 				, (float)(width/2.0), (float)(height/2.0), 0.0f
 				, 0.0f,1.0f,0.0f );
-		//	System.out.println("upY" + upY + " upZ:"+ upZ);
 		// Translate and rotate
 		translate(width/2,height/2,0);
-	//	translate(tX,tY,tZ);
+		translate(tX,tY,tZ);
 		rotateX(a);
 		rotateY(b);
 		stroke(255);
@@ -141,50 +129,44 @@ public class pointCloud extends PApplet{
 
 					// Convert kinect data to world xyz coordinate
 					int rawDepth = depth[offset];
-				/*	if (rawDepth == 2047)
+					/*		if (rawDepth == 2047)
 						rawDepth = prevRawDepth;
-					prevRawDepth = rawDepth;
-				*/	double[] v = depthToWorld(x,y,rawDepth);
+					 	prevRawDepth = rawDepth;
+					 */
+					double[] v = depthToWorld(x,y,rawDepth);
 					double[] result = worldToRGB(v);
 
-					//				if (x==0) leftX = (float) v[0];
-					//			else if (x==w-1) rightX = (float) v[0];
-					pushMatrix();
-					// Scale up by 1000
-					offset = (int)result[0]+(int)result[1]*w;
-					float t = -eyeZ / (factor-(float)v[2]*factor - eyeZ);
-					
-					//color = cPixels[offset];
-					color = kinect.getVideoImage().pixels[offset];
-					stroke(color);
+					 //				if (x==0) leftX = (float) v[0];
+					 //			else if (x==w-1) rightX = (float) v[0];
+					 pushMatrix();
+					 // Scale up by 1000
+					 offset = (int)result[0]+(int)result[1]*w;
 
-					translate((float)v[0]*factor,(float)v[1]*factor,factor-(float)v[2]*factor);
-					if (( x==0 && y==0 )||(x==0&&y==h-1)||(x==w-1&&y==h-1)||(x==w-1&&y==0))
-					{
-						System.out.println("(x,y) = ("+ x+","+y+")"+ " transformed =("+ ((float)v[0]*factor+eyeX)+","+((float)v[1]*factor+eyeY)+","+(factor-(float)v[2]*factor) +")");
-						System.out.println("transformed2 =("+ (t*((float)v[0]*factor)+eyeX)+","+(t*((float)v[1]*factor)+eyeY)+","+(eyeZ + t*(factor-(float)v[2]*factor-eyeZ)) +")");
-					}
-					// Draw a point
-					point(0,0);
-					popMatrix();
+					 //color = cPixels[offset];
+					 color = kinect.getVideoImage().pixels[offset];
+					 stroke(color);
+
+					 translate((float)v[0]*factor,(float)v[1]*factor,factor-(float)v[2]*factor);
+					 // Draw a point
+					 point(0,0);
+					 popMatrix();
 				}
 				tWidth = rightX - leftX;
 				//	if ( minWidth >width) minWidth = width;
 				//	if ( maxWidth <width) maxWidth = width;
 			}
 		}
-			pushMatrix();
-			translate(-width/2,-height/2,0);
-			if(!toggleMode)	
-				image(kinect.getVideoImage(),0,0);
-		//	opencv.read();                   // grab frame from camera
-		//	image( opencv.image(), width/2, 0 );
+		pushMatrix();
+		translate(-width/2,-height/2,0);
+		image(kinect.getDepthImage(),0,0);
+			opencv.read();                   // grab frame from camera
+			image( opencv.image(), width/2, 0 );
 		//	image( opencv.image(), 0, 0 );
-			popMatrix();
-			
-			
-		//	if (count++%10==0)
-		//	System.out.println("maxWidth:" + maxWidth);
+		popMatrix();
+
+
+	///		if (count++%10==0)
+	//		System.out.println("maxWidth:");// + maxWidth);
 		// Rotate
 		//  a += 0.015f;
 	}
@@ -233,8 +215,8 @@ public class pointCloud extends PApplet{
 				//	perspetiveZ++;
 				b+=PI/180.0;
 			}
-			deg = constrain(deg,0,30);
-			kinect.tilt(deg);
+		//	deg = constrain(deg,0,30);
+		//	kinect.tilt(deg);
 		}
 	}
 
@@ -245,9 +227,6 @@ public class pointCloud extends PApplet{
 		}
 		return 0.0f;
 	}
-		double[][] R = {{ 9.9984628826577793e-01, 1.2635359098409581e-03,-1.7487233004436643e-02}, 
-			{-1.4779096108364480e-03,  9.9992385683542895e-01, -1.2251380107679535e-02},
-			{ 1.7470421412464927e-02, 1.2275341476520762e-02,  9.9977202419716948e-01 }};
 
 	double[] depthToWorld(int x, int y, int depthValue) {
 		double[] result = new double[3];
